@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background-color: #f8fafc;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply min-h-screen bg-slate-50 text-slate-900 font-inter;
+}
+
+a {
+  @apply text-primary-600 hover:text-primary-700 transition-colors;
+}
+
+.app-shell {
+  @apply min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100;
+}
+
+.card-surface {
+  @apply bg-white shadow-soft rounded-2xl border border-slate-100;
+}
+
+.section-heading {
+  @apply text-lg font-semibold text-slate-900;
+}
+
+.pill {
+  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-slate-100 text-slate-700;
+}
