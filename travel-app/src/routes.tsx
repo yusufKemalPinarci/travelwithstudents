@@ -33,6 +33,13 @@ import GuideProfileEditor from './pages/GuideProfileEditor.tsx'
 import VerificationPage from './pages/VerificationPage.tsx'
 import TravelerProfilePage from './pages/TravelerProfile.tsx'
 
+// Corporate & Legal
+import AboutUs from './pages/AboutUs.tsx'
+import Contact from './pages/Contact.tsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.tsx'
+import TermsOfService from './pages/TermsOfService.tsx'
+import CookiePolicy from './pages/CookiePolicy.tsx'
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
@@ -96,9 +103,19 @@ export const router = createBrowserRouter([
           { path: 'settings', element: <RequireAuth><Settings /></RequireAuth> },
           { path: 'verification', element: <RequireAuth><VerificationPage /></RequireAuth> },
           { path: 'verify/:type', element: <RequireAuth><VerificationPage /></RequireAuth> },
+
+          // Footer / Static Pages
+          { path: 'about', element: <AboutUs /> },
+          { path: 'contact', element: <Contact /> },
+          { path: 'privacy', element: <PrivacyPolicy /> },
+          { path: 'terms', element: <TermsOfService /> },
+          { path: 'cookies', element: <CookiePolicy /> },
+          { path: 'help', element: <Contact /> }, // Map help to contact for now
+          
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
-      { path: '*', element: <NotFoundPage /> },
+```      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ])
