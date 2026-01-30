@@ -1,16 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, NoSymbolIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { useAuth } from '../context/AuthContext';
+import { getMyBookings } from '../api/bookings';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function GuideCalendarPage() {
+    const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock Data - using state so we can toggle "unavailable"
-    const [bookings] = useState([5, 12, 18, 24]); 
-    const [unavailable, setUnavailable] = useState([2, 9, 16, 23, 30]); 
+    // Real booking data from API
+    const [bookingsData, setBookingsData] = useState<Array<{ date: string; time: string; status: string }>>([]); 
+    const [unavailable, setUnavailable] = useState<number[]>([]); 
+
+    // Fetch bookings from API
+    useEffect(() => {
+        const fetchBookings = async () => {
+            if (!user?.id) return;
+            
+            setLoading(true);
+            try {
+                const bookings = await getMyBookings(user.id, 'STUDENT_GUIDE');
+                
+                // Filter bookings for current month and year
+                const currentMonthBookings = bookings.filter(booking => {
+                    const bookingDate = new Date(booking.date);
+                    return bookingDate.getMonth() === currentDate.getMonth() && 
+                           bookingDate.getFullYear() === currentDate.getFullYear();
+                });
+                
+                setBookingsData(currentMonthBookings.map(b => ({
+                    date: b.date,
+                    time: b.time,
+                    status: b.status
+                })));
+            } catch (error) {
+                console.error('Error fetching bookings:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchBookings();
+    }, [user?.id, currentDate]);
+
+    // Get booked days from real data
+    const bookings = bookingsData
+        .filter(b => b.status === 'confirmed' || b.status === 'pending')
+        .map(b => new Date(b.date).getDate()); 
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -72,6 +112,15 @@ export default function GuideCalendarPage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                {loading ? (
+                    <div className="flex items-center justify-center h-[600px]">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+                            <p className="text-slate-500">Loading calendar...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
                 {/* Days Header */}
                 <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
                     {DAYS.map(day => (
@@ -130,11 +179,14 @@ export default function GuideCalendarPage() {
                                 </div>
 
                                 <div className="mt-2 space-y-1">
-                                    {isBooked && (
-                                        <div className="px-2 py-1 text-[10px] font-bold bg-primary-100 text-primary-700 rounded-md truncate shadow-sm border border-primary-200">
-                                            09:00 AM - Tour
-                                        </div>
-                                    )}
+                                    {bookingsData
+                                        .filter(b => new Date(b.date).getDate() === day)
+                                        .map((booking, idx) => (
+                                            <div key={idx} className="px-2 py-1 text-[10px] font-bold bg-primary-100 text-primary-700 rounded-md truncate shadow-sm border border-primary-200">
+                                                {booking.time} - Tour
+                                            </div>
+                                        ))
+                                    }
                                     {isUnavailable && (
                                         <div className="px-2 py-1 text-[10px] font-bold bg-slate-200 text-slate-500 rounded-md truncate flex items-center gap-1 justify-center">
                                             Unavailable
@@ -144,8 +196,8 @@ export default function GuideCalendarPage() {
                             </div>
                         )
                     })}
-                </div>
-            </div>
+                </div>                    </>
+                )}            </div>
 
             <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-2">

@@ -2,9 +2,10 @@ type LevelProgressBarProps = {
   level: number;
   currentExp: number;
   maxExp: number;
+  title?: string;
 };
 
-export default function LevelProgressBar({ level, currentExp, maxExp }: LevelProgressBarProps) {
+export default function LevelProgressBar({ level, currentExp, maxExp, title = 'Rising Star' }: LevelProgressBarProps) {
   const percentage = Math.min((currentExp / maxExp) * 100, 100);
 
   return (
@@ -14,7 +15,7 @@ export default function LevelProgressBar({ level, currentExp, maxExp }: LevelPro
           <span className="bg-amber-100 text-amber-700 font-black text-xs px-2 py-0.5 rounded uppercase tracking-wider">
             Level {level}
           </span>
-          <span className="text-sm font-bold text-slate-900">Rising Star</span>
+          <span className="text-sm font-bold text-slate-900">{title}</span>
         </div>
         <span className="text-xs font-medium text-slate-500">
           {currentExp} / {maxExp} XP

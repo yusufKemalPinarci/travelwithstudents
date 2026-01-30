@@ -9,7 +9,7 @@ type EmptyStateProps = {
 }
 
 export default function EmptyState({ 
-  title = 'No guides found', 
+  title = 'No student guides found', 
   message = 'Try adjusting your filters or search query to find what you are looking for.',
   actionLabel = 'Clear all filters',
   onAction

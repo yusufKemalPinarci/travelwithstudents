@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import Button from './Button'
+import { getNotifications, markAsRead, type Notification } from '../api/notifications'
+import { getImageUrl } from '../utils/image'
+import { formatDistanceToNow } from 'date-fns' 
 import { 
     BellIcon, 
     ArrowRightStartOnRectangleIcon, 
@@ -13,30 +16,60 @@ import {
     EyeIcon,
     PencilSquareIcon,
     TicketIcon,
-    HeartIcon
+    HeartIcon,
+    UserCircleIcon
 } from '@heroicons/react/24/outline'
 
 const STUDENT_LINKS = [
-    { to: '/guide/dashboard', label: 'Dashboard' },
-    { to: '/guide/inbox', label: 'Messages' }, // or just /inbox if shared? GuideLayout uses /guide/inbox
-    { to: '/guide/earnings', label: 'Earnings' },
-    { to: '/guide/wallet', label: 'Wallet' },
+    { to: '/guide/messages', label: 'Messages' },
     { to: '/guide/calendar', label: 'Calendar' },
 ]
 
 const TRAVELER_LINKS = [
+    { to: '/tours', label: 'Tours' },
     { to: '/search', label: 'Search' },
     { to: '/trips', label: 'My Trips' },
-    { to: '/inbox', label: 'Inbox' },
+    { to: '/my-requests', label: 'My Requests' },
+    { to: '/messages', label: 'Messages' },
 ]
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth()
+  const location = useLocation()
+  const isGuidePanel = location.pathname.startsWith('/guide')
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  
   const menuRef = useRef<HTMLDivElement>(null)
   const notificationRef = useRef<HTMLDivElement>(null)
+
+  // Fetch notifications
+  useEffect(() => {
+    if (user?.id) {
+        const fetchNotifications = async () => {
+            const data = await getNotifications(user.id);
+            setNotifications(data);
+        };
+        fetchNotifications();
+        
+        // Poll every 30 seconds
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }
+  }, [user?.id]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotificationClick = async (notification: Notification) => {
+      if (!notification.read) {
+          await markAsRead(notification.id);
+          setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+      }
+      setIsNotificationsOpen(false);
+  };
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -65,7 +98,7 @@ export default function Navbar() {
           { to: '/', label: 'Home' },
           { to: '/search', label: 'Search' },
       ]
-  } else if (user?.role === 'Student Guide') {
+  } else if (user?.role === 'STUDENT_GUIDE' && isGuidePanel) {
       navItems = STUDENT_LINKS
   } else {
       // Traveler Default - STRICT: No Profile link here, only in Avatar dropdown
@@ -73,29 +106,29 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-100 dark:border-slate-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
              {/* Mobile Menu Button */}
             <button 
-                className="md:hidden p-2 -ml-2 text-slate-600"
+                className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-300"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="Toggle mobile menu"
             >
                 <span className="material-symbols-outlined">menu</span>
             </button>
-            <Link to={user?.role === 'Student Guide' ? '/guide' : '/'} className="flex items-center gap-2">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-white font-semibold ${user?.role === 'Student Guide' ? 'bg-orange-600' : 'bg-primary-600'}`}>
-                  {user?.role === 'Student Guide' ? 'G' : 'ST'}
+            <Link to={isGuidePanel ? '/guide' : '/'} className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white font-semibold bg-primary-600">
+                  ST
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Travel with Student</p>
-                  {user?.role === 'Student Guide' && <p className="text-[10px] font-bold text-orange-600 uppercase">Guide Portal</p>}
+                  {user?.role === 'STUDENT_GUIDE' && isGuidePanel && <p className="text-[10px] font-bold text-primary-600 uppercase">Guide Portal</p>}
                 </div>
             </Link>
           </div>
 
-          <nav className="hidden md:flex gap-1 bg-slate-100/50 p-1 rounded-xl">
+          <nav className="hidden md:flex gap-1 bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl">
              {navItems.map((item) => (
                <NavLink
                  key={item.to}
@@ -115,12 +148,35 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {isAuthenticated && user?.role === 'STUDENT_GUIDE' && (
+                <div className="mr-2">
+                    {/* Switcher Button */}
+                    {isGuidePanel ? (
+                        <Link 
+                            to="/" 
+                            className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                            <span className="bg-blue-100 text-blue-600 rounded-full p-1"><UserCircleIcon className="w-3 h-3"/></span>
+                            <span className="hidden sm:inline">Switch to</span> Traveler
+                        </Link>
+                    ) : (
+                       <Link 
+                            to="/guide/dashboard" 
+                            className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                             <span className="bg-orange-100 text-orange-600 rounded-full p-1"><ArrowRightStartOnRectangleIcon className="w-3 h-3 rotate-180"/></span>
+                             <span className="hidden sm:inline">Switch to</span> Student
+                        </Link>
+                    )}
+                </div>
+            )}
+
             {!isAuthenticated ? (
               <>
-                <Button as={Link} to="/auth" variant="ghost" className="hidden sm:inline-flex">
+                <Button as={Link} to="/auth" state={{ mode: 'login' }} variant="ghost" className="hidden sm:inline-flex">
                   Log in
                 </Button>
-                <Button as={Link} to="/auth" variant="primary">
+                <Button as={Link} to="/auth" state={{ mode: 'register' }} variant="primary">
                   Register
                 </Button>
               </>
@@ -134,25 +190,41 @@ export default function Navbar() {
                         aria-label="Notifications"
                      >
                          <BellIcon className="w-6 h-6" />
-                         <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                         {unreadCount > 0 && (
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                         )}
                      </button>
                      
                      {isNotificationsOpen && (
                          <div className="absolute right-0 top-full mt-2 w-80 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-slate-900/5 focus:outline-none z-50 overflow-hidden border border-slate-100">
                              <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                                  <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                                 <span className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">2 New</span>
+                                 {unreadCount > 0 && (
+                                    <span className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">{unreadCount} New</span>
+                                 )}
                              </div>
                              <div className="max-h-96 overflow-y-auto">
-                                 {[1, 2].map((i) => (
-                                     <div key={i} className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors cursor-pointer">
-                                         <p className="text-sm text-slate-800 font-medium">New Booking Request</p>
-                                         <p className="text-xs text-slate-500 mt-1">Isabella requested a tour for "Historical Peninsula".</p>
-                                         <p className="text-[10px] text-slate-400 mt-2">2 hours ago</p>
+                                 {notifications.length > 0 ? (
+                                     notifications.slice(0, 5).map((notification) => (
+                                         <div 
+                                            key={notification.id} 
+                                            onClick={() => handleNotificationClick(notification)}
+                                            className={`px-4 py-3 border-b border-slate-50 last:border-0 transition-colors cursor-pointer ${notification.read ? 'bg-white hover:bg-slate-50' : 'bg-blue-50/50 hover:bg-blue-50'}`}
+                                         >
+                                             <p className={`text-sm text-slate-800 ${!notification.read ? 'font-semibold' : 'font-medium'}`}>{notification.title}</p>
+                                             <p className="text-xs text-slate-500 mt-1">{notification.message}</p>
+                                             <p className="text-[10px] text-slate-400 mt-2">
+                                                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                             </p>
+                                         </div>
+                                     ))
+                                 ) : (
+                                     <div className="px-4 py-8 text-center text-slate-500 text-sm">
+                                         No notifications yet
                                      </div>
-                                 ))}
+                                 )}
                              </div>
-                             <Link to="/notifications" className="block p-3 text-center text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors">
+                             <Link to="/notifications" className="block p-3 text-center text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors" onClick={() => setIsNotificationsOpen(false)}>
                                  View all notifications
                              </Link>
                          </div>
@@ -165,7 +237,7 @@ export default function Navbar() {
                     className="flex items-center gap-2 focus:outline-none"
                     aria-label="User menu"
                   >
-                     <Avatar name={user?.name || "User"} size="sm" verified />
+                     <Avatar name={user?.name || "User"} src={getImageUrl(user?.profileImage)} size="sm" verified gender={user?.gender} />
                   </button>
 
                   {isMenuOpen && (
@@ -174,8 +246,8 @@ export default function Navbar() {
                       <div className="bg-slate-50 px-4 py-3 border-b border-slate-100">
                         <div className="flex items-center justify-between">
                             <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user?.role === 'Student Guide' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {user?.role === 'Student Guide' ? '🎓 Guide' : '✈️ Traveler'}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user?.role === 'STUDENT_GUIDE' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {user?.role === 'STUDENT_GUIDE' ? '🎓 Guide' : '✈️ Traveler'}
                             </span>
                         </div>
                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>
@@ -183,10 +255,25 @@ export default function Navbar() {
 
                       <div className="py-2">
                          {/* Role Specific Items */}
-                        {user?.role === 'Traveler' ? (
+                        {user?.role === 'STUDENT_GUIDE' && isGuidePanel ? (
+                          <>
+                             <div className="px-3 py-1">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-3">Student Menu</p>
+                                <Link to={`/traveler/${user?.id}`} className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                  <UserCircleIcon className="w-5 h-5 text-slate-400" /> My Profile
+                                </Link>
+                                <Link to="/guide/verification" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                    <ShieldCheckIcon className="w-5 h-5 text-slate-400" /> Trust & Verification
+                                </Link>
+                             </div>
+                          </>
+                        ) : (
                           <>
                              <div className="px-3 py-1">
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-3">Traveler Menu</p>
+                                <Link to={`/traveler/${user?.id}`} className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                  <UserCircleIcon className="w-5 h-5 text-slate-400" /> My Profile
+                                </Link>
                                 <Link to="/trips" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
                                   <TicketIcon className="w-5 h-5 text-slate-400" /> My Trips
                                 </Link>
@@ -198,43 +285,46 @@ export default function Navbar() {
                                 </Link>
                              </div>
                           </>
-                        ) : (
-                          <>
-                             <div className="px-3 py-1">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-3">Student Menu</p>
-                                <Link to={`/profile/${user?.id}`} target="_blank" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                                    <EyeIcon className="w-5 h-5 text-slate-400" /> View Public Profile
-                                </Link>
-                                <Link to="/guide/edit-profile" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                                    <PencilSquareIcon className="w-5 h-5 text-slate-400" /> Edit Profile
-                                </Link>
-                                <Link to="/guide/wallet" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                                    <WalletIcon className="w-5 h-5 text-slate-400" /> Wallet & Earnings
-                                </Link>
-                                <Link to="/verification" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                                    <ShieldCheckIcon className="w-5 h-5 text-slate-400" /> Trust & Verification
-                                </Link>
-                             </div>
-                          </>
                         )}
 
                         <div className="my-1 border-t border-slate-100"></div>
 
                         <div className="px-3 py-1">
-                            <Link 
-                                to="/settings" 
-                                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                <Cog6ToothIcon className="w-5 h-5 text-slate-400" /> Settings
-                            </Link>
-                             <Link 
-                                to="/help" 
-                                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400" /> Help & Support
-                            </Link>
+                            {user?.role === 'STUDENT_GUIDE' && isGuidePanel ? (
+                                <>
+                                    <Link 
+                                        to="/guide/settings" 
+                                        className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        <Cog6ToothIcon className="w-5 h-5 text-slate-400" /> Settings
+                                    </Link>
+                                    <Link 
+                                        to="/guide/help" 
+                                        className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400" /> Help & Support
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link 
+                                        to="/settings" 
+                                        className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        <Cog6ToothIcon className="w-5 h-5 text-slate-400" /> Settings
+                                    </Link>
+                                    <Link 
+                                        to="/help" 
+                                        className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400" /> Help & Support
+                                    </Link>
+                                </>
+                            )}
                         </div>
                       </div>
 
@@ -285,8 +375,8 @@ export default function Navbar() {
                 <div className="pt-4 mt-2 border-t border-slate-100 grid gap-2">
                     {!isAuthenticated ? (
                        <>
-                         <Button as={Link} to="/auth" variant="ghost" fullWidth onClick={() => setIsMobileMenuOpen(false)}>Log in</Button>
-                         <Button as={Link} to="/auth" variant="primary" fullWidth onClick={() => setIsMobileMenuOpen(false)}>Register</Button>
+                         <Button as={Link} to="/auth" state={{ mode: 'login' }} variant="ghost" fullWidth onClick={() => setIsMobileMenuOpen(false)}>Log in</Button>
+                         <Button as={Link} to="/auth" state={{ mode: 'register' }} variant="primary" fullWidth onClick={() => setIsMobileMenuOpen(false)}>Register</Button>
                        </>
                     ) : (
                          <Button variant="ghost" fullWidth onClick={() => { logout(); setIsMobileMenuOpen(false); }}>Log out</Button>

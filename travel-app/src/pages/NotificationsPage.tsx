@@ -1,4 +1,8 @@
-import { notifications } from '../utils/mockData'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getNotifications, markAllAsRead, markAsRead } from '../api/notifications'
+import type { Notification } from '../api/notifications'
+import { useAuth } from '../context/AuthContext'
 import { 
     CheckCircleIcon, 
     ExclamationCircleIcon, 
@@ -21,11 +25,85 @@ const styles: Record<string, string> = {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user) return
+      const data = await getNotifications(user.id)
+      setNotifications(data)
+      setLoading(false)
+    }
+    fetchNotifications()
+  }, [user])
+
+  const handleMarkAllAsRead = async () => {
+    if (!user) return
+    await markAllAsRead(user.id)
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    if (!notification.read) {
+      await markAsRead(notification.id)
+      setNotifications(prev => prev.map(n => 
+        n.id === notification.id ? { ...n, read: true } : n
+      ))
+    }
+
+    // Navigate if actionUrl exists
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl)
+    } else if (notification.metadata) {
+      // Handle navigation based on notification type and metadata
+      switch (notification.type) {
+        case 'BOOKING':
+          if (notification.metadata.bookingId) {
+            navigate(`/bookings/${notification.metadata.bookingId}`)
+          }
+          break
+        case 'MESSAGE':
+          if (notification.metadata.conversationId) {
+            navigate(`/messages?conversation=${notification.metadata.conversationId}`)
+          } else {
+            navigate('/messages')
+          }
+          break
+        case 'REVIEW':
+          if (notification.metadata.reviewId || notification.metadata.bookingId) {
+            navigate(`/bookings/${notification.metadata.bookingId}`)
+          }
+          break
+        case 'PAYMENT':
+          if (notification.metadata.bookingId) {
+            navigate(`/bookings/${notification.metadata.bookingId}`)
+          }
+          break
+        default:
+          break
+      }
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <button className="text-sm font-medium text-primary-600 hover:text-primary-700">
+          <button 
+            onClick={handleMarkAllAsRead}
+            className="text-sm font-medium text-primary-600 hover:text-primary-700"
+          >
               Mark all as read
           </button>
       </div>
@@ -47,16 +125,18 @@ export default function NotificationsPage() {
             return (
                 <div 
                     key={notification.id} 
-                    className={`card-surface p-4 flex gap-4 ${!notification.read ? 'border-l-4 border-l-primary-500' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`card-surface p-4 flex gap-4 cursor-pointer transition-all hover:shadow-md ${!notification.read ? 'border-l-4 border-l-primary-500' : ''}`}
                 >
                     <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${style}`}>
                         <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
+                        <p className="font-bold text-slate-900 text-sm">{notification.title}</p>
+                        <p className={`text-sm mt-0.5 ${!notification.read ? 'text-slate-900' : 'text-slate-600'}`}>
                             {notification.message}
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">{notification.time}</p>
+                        <p className="text-xs text-slate-400 mt-1">{new Date(notification.createdAt).toLocaleString('tr-TR')}</p>
                     </div>
                     {!notification.read && (
                         <div className="flex-shrink-0 self-center">

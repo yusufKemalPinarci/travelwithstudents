@@ -1,20 +1,36 @@
-export default function EarningsChart() {
-  const data = [40, 65, 45, 90, 75, 55, 80];
-  const max = Math.max(...data);
+interface EarningsChartProps {
+  data?: Array<{ month: string; amount: number }>;
+}
+
+export default function EarningsChart({ data }: EarningsChartProps) {
+  // If no data, show empty state instead of mock
+  if (!data || data.length === 0) {
+    return (
+      <div className="card-surface p-5 h-full flex flex-col items-center justify-center text-center">
+        <h3 className="font-bold text-slate-900 mb-2">Earnings History</h3>
+        <p className="text-slate-500 text-sm">No earnings data available yet.</p>
+      </div>
+    )
+  }
+
+  const chartData = data;
+  
+  const values = chartData.map(d => d.amount);
+  const max = Math.max(...values, 10); // Minimum scale
 
   return (
     <div className="card-surface p-5 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="font-bold text-slate-900">Weekly Earnings</h3>
-        <select className="text-sm border-none bg-slate-50 rounded-lg px-2 py-1 text-slate-600 focus:ring-0 cursor-pointer">
-          <option>This Week</option>
-          <option>Last Week</option>
-        </select>
+        <h3 className="font-bold text-slate-900">Earnings History</h3>
       </div>
       
       <div className="flex-1 flex items-end justify-between gap-2">
-        {data.map((value, i) => {
-           const height = `${(value / max) * 100}%`;
+        {chartData.map((item, i) => {
+           let height = "4px";
+           if (max > 0) {
+             const pct = (item.amount / max) * 100;
+             height = `${pct === 0 ? 1 : pct}%`;
+           }
            return (
              <div key={i} className="flex flex-col items-center gap-2 flex-1 group cursor-pointer relative">
                <div className="w-full flex items-end justify-center h-48 bg-slate-50 rounded-t-lg">
@@ -27,10 +43,10 @@ export default function EarningsChart() {
                </div>
                 {/* Tooltip */}
                 <div className="absolute -top-6 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg pointer-events-none">
-                ${value * 2.5}
+                ${item.amount}
                 </div>
                <span className="text-xs text-slate-500 font-medium">
-                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
+                 {item.month}
                </span>
              </div>
            )

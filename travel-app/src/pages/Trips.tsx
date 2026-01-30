@@ -1,9 +1,13 @@
-import { useState } from 'react'
-import { bookings as initialBookings } from '../utils/mockData.ts'
+import { useState, useEffect } from 'react'
 import BookingCard from '../components/BookingCard.tsx'
 import ReviewModal from '../components/ReviewModal.tsx'
 import CancellationModal from '../components/CancellationModal.tsx'
-import type { Booking, BookingStatus } from '../types.ts'
+import type { BookingStatus } from '../types.ts'
+import { getMyBookings } from '../api/bookings'
+import type { Booking } from '../api/bookings'
+import { createReview } from '../api/reviews'
+import { useAuth } from '../context/AuthContext.tsx'
+import { PaperAirplaneIcon } from '@heroicons/react/24/outline'
 
 const tabs: { id: BookingStatus | 'all'; label: string }[] = [
     { id: 'all', label: 'All Trips' },
@@ -13,20 +17,47 @@ const tabs: { id: BookingStatus | 'all'; label: string }[] = [
 ]
 
 export default function TripsPage() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<BookingStatus | 'all'>('all')
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings) 
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null)
   const [cancelBooking, setCancelBooking] = useState<Booking | null>(null)
+
+  // API'den booking'leri çek
+  const fetchBookings = async () => {
+    if (!user) return
+    setLoading(true)
+    const data = await getMyBookings(user.id, user.role === 'STUDENT_GUIDE' ? 'STUDENT_GUIDE' : 'TRAVELER')
+    setBookings(data)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchBookings()
+  }, [user])
 
   const filteredBookings = bookings.filter(
       (b) => activeTab === 'all' || b.status === activeTab
   )
 
-  const handleReviewSubmit = () => {
-    if (reviewBooking) {
-      setBookings(prev => prev.map(b => b.id === reviewBooking.id ? { ...b, hasReview: true } : b))
-      setReviewBooking(null)
-      alert("Thanks for your feedback!")
+  const handleReviewSubmit = async (data: any) => {
+    if (reviewBooking && user) {
+      try {
+        await createReview({
+           bookingId: reviewBooking.id,
+           guideId: reviewBooking.guideId,
+           travelerId: user.id,
+           rating: data.rating,
+           comment: data.review,
+           tags: data.tags
+        });
+        
+        setBookings(prev => prev.map(b => b.id === reviewBooking.id ? { ...b, hasReview: true } : b))
+        setReviewBooking(null)
+      } catch (e) {
+        console.error("Failed to submit review", e);
+      }
     }
   }
 
@@ -36,6 +67,11 @@ export default function TripsPage() {
         setCancelBooking(null)
         alert("Booking cancelled successfully.")
     }
+  }
+
+  const handleAttendanceConfirmed = () => {
+    // Refresh bookings to get updated attendance status
+    fetchBookings()
   }
 
   return (
@@ -65,26 +101,34 @@ export default function TripsPage() {
           </div>
       </div>
 
-      <div className="grid gap-4 px-4 sm:px-0">
-        {filteredBookings.length > 0 ? (
-          filteredBookings.map((booking) => (
-            <BookingCard 
-                key={booking.id} 
-                booking={booking} 
-                onReview={(b) => setReviewBooking(b)}
-                onCancel={(b) => setCancelBooking(b)}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
-            <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-3xl text-slate-400">flight_off</span>
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Yükleniyor...</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 px-4 sm:px-0">
+          {filteredBookings.length > 0 ? (
+            filteredBookings.map((booking) => (
+              <BookingCard 
+                  key={booking.id} 
+                  booking={booking} 
+                  onReview={(b) => setReviewBooking(b)}
+                  onCancel={(b) => setCancelBooking(b)}
+                  onAttendanceConfirmed={handleAttendanceConfirmed}
+              />
+            ))
+          ) : (
+            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
+              <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                <PaperAirplaneIcon className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">No trips found</h3>
+              <p className="text-slate-500 text-sm">You haven't booked any trips in this category yet.</p>
             </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No trips found</h3>
-            <p className="text-slate-500 text-sm">You haven't booked any trips in this category yet.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {reviewBooking && (
         <ReviewModal

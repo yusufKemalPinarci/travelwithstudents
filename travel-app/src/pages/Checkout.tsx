@@ -17,7 +17,7 @@ export default function CheckoutPage() {
     await new Promise((resolve) => setTimeout(resolve, 1500))
     setLoading(false)
     resetBooking()
-    alert('Payment successful! Redirecting to your trips...')
+    // alert('Payment successful! Redirecting to your trips...')
     navigate('/trips')
   }
 

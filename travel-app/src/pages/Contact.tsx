@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { EnvelopeIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import Button from '../components/Button';
 import InputField from '../components/InputField';
 
@@ -24,34 +25,34 @@ export default function Contact() {
          {/* Left Side: Contact Info */}
          <div className="space-y-8">
              <div>
-                <h1 className="text-4xl font-bold text-slate-900 mb-4">Get in touch</h1>
-                <p className="text-lg text-slate-600">
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Get in touch</h1>
+                <p className="text-lg text-slate-600 dark:text-slate-300">
                     Have questions about specific tours, safety, or joining as a student guide? We're here to help.
                 </p>
              </div>
 
              <div className="space-y-6">
                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 shrink-0">
-                        <span className="material-symbols-outlined text-2xl">mail</span>
+                    <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
+                        <EnvelopeIcon className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-900 text-lg">Chat to support</h3>
-                        <p className="text-slate-500 mb-1">We usually respond within 24 hours.</p>
-                        <a href="mailto:support@travelwithstudent.com" className="text-primary-600 font-semibold hover:underline">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-lg">Chat to support</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-1">We usually respond within 24 hours.</p>
+                        <a href="mailto:support@travelwithstudent.com" className="text-primary-600 dark:text-primary-400 font-semibold hover:underline">
                             support@travelwithstudent.com
                         </a>
                     </div>
                  </div>
 
                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 shrink-0">
-                        <span className="material-symbols-outlined text-2xl">location_on</span>
+                    <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
+                        <MapPinIcon className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-900 text-lg">Visit us</h3>
-                        <p className="text-slate-500 mb-1">Come say hello at our office HQ.</p>
-                        <p className="text-slate-700 font-medium">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-lg">Visit us</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-1">Come say hello at our office HQ.</p>
+                        <p className="text-slate-700 dark:text-slate-300 font-medium">
                             University Technopark<br/>
                             Istanbul, Turkey
                         </p>
@@ -59,13 +60,13 @@ export default function Contact() {
                  </div>
                  
                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 shrink-0">
-                        <span className="material-symbols-outlined text-2xl">call</span>
+                    <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
+                        <PhoneIcon className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-900 text-lg">Call us</h3>
-                        <p className="text-slate-500 mb-1">Mon-Fri from 8am to 5pm.</p>
-                        <p className="text-slate-700 font-medium">+90 (212) 555-0123</p>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-lg">Call us</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-1">Mon-Fri from 8am to 5pm.</p>
+                        <p className="text-slate-700 dark:text-slate-300 font-medium">+90 (212) 555-0123</p>
                     </div>
                  </div>
              </div>

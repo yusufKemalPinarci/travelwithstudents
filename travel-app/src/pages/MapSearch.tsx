@@ -1,14 +1,33 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import GuideCard from '../components/GuideCard.tsx'
-import { guides } from '../utils/mockData.ts'
+import { getAllGuides } from '../api/guides'
 
 export default function MapSearchPage() {
+  const [guides, setGuides] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeGuide, setActiveGuide] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchGuides = async () => {
+      const data = await getAllGuides()
+      setGuides(data)
+      setLoading(false)
+    }
+    fetchGuides()
+  }, [])
 
   const highlighted = useMemo(
     () => guides.find((guide) => guide.id === activeGuide) ?? guides[0],
-    [activeGuide],
+    [activeGuide, guides],
   )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr,420px]">

@@ -1,0 +1,586 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String
+  name              String
+  role              UserRole
+  isEmailVerified   Boolean  @default(false)
+  emailVerifiedAt   DateTime?
+  phoneNumber       String?
+  isPhoneVerified   Boolean  @default(false)
+  phoneVerifiedAt   DateTime?
+  profileImage      String?  @db.Text
+  gender            Gender? @default(NOT_SPECIFIED)
+  status            UserStatus @default(ACTIVE)
+  isOnline          Boolean @default(true)
+  showOnlineStatus  Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastLoginAt       DateTime?
+
+  // Relations
+  travelerProfile   TravelerProfile?
+  guideProfile      GuideProfile?
+  bookingsAsTraveler Booking[] @relation("TravelerBookings")
+  bookingRequests   BookingRequest[] @relation("TravelerRequests")
+  reviewsWritten    Review[]
+  sentMessages      Message[] @relation("SentMessages")
+  conversations     ConversationParticipant[]
+  notifications     Notification[]
+  transactions      Transaction[]
+  wishlist          Wishlist[]
+  adminActions      AdminLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+enum UserRole {
+  TRAVELER
+  STUDENT_GUIDE
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  INACTIVE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NOT_SPECIFIED
+}
+
+// ============================================
+// TRAVELER PROFILE
+// ============================================
+
+model TravelerProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  bio             String?  @db.Text
+  location        String?
+  dateOfBirth     DateTime?
+  nationality     String?
+  languages       Json     // ["English", "Spanish"]
+  interests       Json?    // ["Food", "History"]
+  totalBookings   Int      @default(0)
+  totalSpent      Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("traveler_profiles")
+}
+
+// ============================================
+// GUIDE PROFILE
+// ============================================
+
+model GuideProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  university          String
+  major               String?
+  graduationYear      Int?
+  studentIdVerified   Boolean  @default(false)
+  studentIdDocument   String?  @db.Text
+  bio                 String   @db.Text
+  motto               String?  @db.VarChar(200)
+  hourlyRate          Decimal  @db.Decimal(8, 2)
+  city                String
+  country             String?
+  latitude            Decimal? @db.Decimal(10, 8)
+  longitude           Decimal? @db.Decimal(11, 8)
+  languages           Json     // ["English", "Turkish", "Spanish"]
+  tags                Json     // ["History", "Food tours", "Nightlife"]
+  gallery             Json?    // ["url1", "url2", "url3"]
+  responseTime        String?  @default("Within 1 hour")
+  totalEarnings       Decimal  @default(0) @db.Decimal(10, 2)
+  totalBookings       Int      @default(0)
+  averageRating       Decimal  @default(0) @db.Decimal(3, 2)
+  totalReviews        Int      @default(0)
+  profileViews        Int      @default(0)
+  isAvailable         Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings            Booking[]
+  bookingRequests     BookingRequest[] @relation("GuideRequests")
+  availability        GuideAvailability[]
+  reviews             Review[]
+  transactions        Transaction[]
+  tours               Tour[]
+
+  @@index([city])
+  @@index([averageRating])
+  @@index([hourlyRate])
+  @@index([isAvailable])
+  @@map("guide_profiles")
+}
+
+// ============================================
+// TOURS
+// ============================================
+
+model Tour {
+  id              String   @id @default(uuid())
+  guideId         String
+  title           String
+  description     String   @db.Text
+  category        String
+  location        String
+  duration        Int      // hours
+  price           Decimal  @db.Decimal(10, 2)
+  language        String
+  photos          Json     // ["url1", "url2"]
+  tourDate        DateTime? // Specific date for the tour
+  tourTime        String?   // e.g., "14:00"
+  maxParticipants Int      @default(10) // Maximum number of participants
+  availableSlots  Int      @default(10) // Remaining available slots
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  guide       GuideProfile @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+
+  @@index([guideId])
+  @@index([category])
+  @@index([location])
+  @@index([tourDate])
+  @@map("tours")
+}
+
+// ============================================
+// GUIDE AVAILABILITY
+// ============================================
+
+model GuideAvailability {
+  id          String   @id @default(uuid())
+  guideId     String
+  dayOfWeek   DayOfWeek
+  isActive    Boolean  @default(true)
+  startTime   String   // "09:00"
+  tourId          String?
+  endTime     String   // "17:00"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  guide       GuideProfile @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@unique([guideId, dayOfWeek])
+  @@map("guide_availability")
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ============================================
+// BOOKINGS
+// ============================================
+
+model Booking {
+  id              String        @id @default(uuid())
+  travelerId      String
+  guideId         String
+  tourId          String?
+  bookingDate     DateTime      // Date of the actual tour
+  bookingTime     String        // "10:00 AM"
+  duration        BookingDuration
+  participantCount Int          @default(1) // Number of people in the booking
+  totalPrice      Decimal       @db.Decimal(10, 2)
+  platformFee     Decimal       @db.Decimal(10, 2)
+  guideEarnings   Decimal       @db.Decimal(10, 2)
+  status          BookingStatus @default(PENDING)
+  notes           String?       @db.Text
+  meetingPoint    String?       @db.Text
+  cancellationReason String?    @db.Text
+  cancelledAt     DateTime?
+  cancelledBy     String?       // userId who cancelled
+  confirmedAt     DateTime?
+  completedAt     DateTime?
+  
+  // Tour snapshot - saved at booking time to preserve original tour details
+  tourSnapshot    Json?         // Snapshot of tour details at time of booking
+  
+  // Attendance tracking
+  guideAttendance    AttendanceStatus? @default(PENDING)
+  travelerAttendance AttendanceStatus? @default(PENDING)
+  guideConfirmedAt   DateTime?
+  travelerConfirmedAt DateTime?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  traveler        User @relation("TravelerBookings", fields: [travelerId], references: [id], onDelete: Cascade)
+  tour            Tour? @relation(fields: [tourId], references: [id])
+  guide           GuideProfile @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  review          Review?
+  transaction     Transaction?
+  messages        Message[]
+  bookingRequest  BookingRequest? @relation(fields: [requestId], references: [id])
+  requestId       String? @unique
+
+  @@index([travelerId])
+  @@index([guideId])
+  @@index([status])
+  @@index([bookingDate])
+  @@map("bookings")
+}
+
+// ============================================
+// BOOKING REQUESTS (For Guide Bookings Only)
+// ============================================
+
+model BookingRequest {
+  id              String        @id @default(uuid())
+  travelerId      String
+  guideId         String
+  bookingDate     DateTime      // Requested date
+  bookingTime     String        // Requested time
+  duration        BookingDuration
+  participantCount Int          @default(1)
+  message         String?       @db.Text // Message from traveler
+  status          RequestStatus @default(PENDING)
+  
+  // Calculated pricing (when guide accepts)
+  estimatedPrice  Decimal?      @db.Decimal(10, 2)
+  
+  // Response from guide
+  guideResponse   String?       @db.Text
+  respondedAt     DateTime?
+  
+  // Payment deadline
+  paymentDeadline DateTime?     // 24 hours after acceptance
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  expiresAt       DateTime      // Auto-expire after 72 hours if no response
+
+  // Relations
+  traveler        User @relation("TravelerRequests", fields: [travelerId], references: [id], onDelete: Cascade)
+  guide           GuideProfile @relation("GuideRequests", fields: [guideId], references: [id], onDelete: Cascade)
+  booking         Booking?      // Created after payment
+
+  @@index([travelerId])
+  @@index([guideId])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([expiresAt])
+  @@map("booking_requests")
+}
+
+enum RequestStatus {
+  PENDING           // Waiting for guide response
+  ACCEPTED          // Guide accepted, waiting for payment
+  REJECTED          // Guide rejected
+  EXPIRED           // No response within time limit
+  PAYMENT_PENDING   // Accepted but payment deadline approaching
+  PAID              // Payment completed, booking created
+  PAYMENT_EXPIRED   // Payment deadline passed
+  CANCELLED         // Cancelled by traveler
+}
+
+enum BookingStatus {
+  PENDING           // Waiting for confirmation
+  CONFIRMED         // Both parties confirmed
+  COMPLETED         // Successfully completed
+  CANCELLED         // Cancelled by either party
+  REFUNDED          // Money refunded
+  NO_SHOW_GUIDE     // Guide didn't show up
+  NO_SHOW_TRAVELER  // Traveler didn't show up
+  NO_SHOW_BOTH      // Neither showed up
+  DISPUTED          // In dispute
+}
+
+enum BookingDuration {
+  HALF_DAY
+  FULL_DAY
+}
+
+enum AttendanceStatus {
+  PENDING     // Not confirmed yet
+  CONFIRMED   // Confirmed attendance
+  NO_SHOW     // Didn't show up
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model Review {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  guideId     String
+  travelerId  String
+  rating      Int      // 1-5
+  comment     String?  @db.Text
+  tags        Json?    // ["Friendly", "Knowledgeable", "Punctual"]
+  isPublic    Boolean  @default(true)
+  response    String?  @db.Text  // Guide's response
+  respondedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guide       GuideProfile @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  traveler    User @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+
+  @@index([guideId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Conversation {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  participants ConversationParticipant[]
+  messages    Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id              String   @id @default(uuid())
+  conversationId  String
+  userId          String
+  lastReadAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String
+  senderId        String
+  content         String   @db.Text
+  isRead          Boolean  @default(false)
+  readAt          DateTime?
+  bookingId       String?  // Link to actual booking if accepted
+  bookingData     Json?    // Booking proposal data
+  createdAt       DateTime @default(now())
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  booking         Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  actionUrl   String?
+  metadata    Json?            // Additional data
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  BOOKING
+  MESSAGE
+  REVIEW
+  PAYMENT
+  SYSTEM
+  INFO
+}
+
+// ============================================
+// TRANSACTIONS & PAYMENTS
+// ============================================
+
+model Transaction {
+  id              String            @id @default(uuid())
+  userId          String
+  bookingId       String?           @unique
+  guideId         String?
+  type            TransactionType
+  amount          Decimal           @db.Decimal(10, 2)
+  currency        String            @default("USD") @db.VarChar(3)
+  status          TransactionStatus @default(PENDING)
+  paymentMethod   String?           // 'STRIPE', 'PAYPAL', 'MOCK' (for testing)
+  stripePaymentId String?           @unique
+  escrowStatus    EscrowStatus      @default(PENDING) // Escrow tracking
+  description     String            @db.Text
+  metadata        Json?
+  processedAt     DateTime?
+  releasedAt      DateTime?         // When funds released to guide
+  refundedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking         Booking? @relation(fields: [bookingId], references: [id])
+  guide           GuideProfile? @relation(fields: [guideId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([escrowStatus])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  BOOKING_PAYMENT   // Initial payment from traveler
+  PAYOUT            // Payment to guide
+  REFUND            // Refund to traveler
+  PLATFORM_FEE      // Commission
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum EscrowStatus {
+  PENDING           // Payment initiated
+  HELD              // Money held in escrow
+  RELEASED          // Released to guide
+  REFUNDED          // Refunded to traveler
+  DISPUTED          // In dispute
+}
+
+// ============================================
+// WISHLIST
+// ============================================
+
+model Wishlist {
+  id          String   @id @default(uuid())
+  userId      String
+  guideId     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guideId])
+  @@index([userId])
+  @@map("wishlist")
+}
+
+// ============================================
+// CITIES & CATEGORIES
+// ============================================
+
+model City {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  country     String
+  image       String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@map("cities")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
+  image       String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+// ============================================
+// ADMIN LOGS
+// ============================================
+
+model AdminLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  action      String
+  targetType  String?  // "User", "Booking", "Review", etc.
+  targetId    String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  admin       User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_logs")
+}

@@ -13,7 +13,7 @@
 }
 
 body {
-  @apply min-h-screen bg-slate-50 text-slate-900 font-inter;
+  @apply min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-inter;
 }
 
 a {
@@ -21,17 +21,17 @@ a {
 }
 
 .app-shell {
-  @apply min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100;
+  @apply min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950;
 }
 
 .card-surface {
-  @apply bg-white shadow-soft rounded-2xl border border-slate-100;
+  @apply bg-white dark:bg-slate-900 shadow-soft rounded-2xl border border-slate-100 dark:border-slate-800;
 }
 
 .section-heading {
-  @apply text-lg font-semibold text-slate-900;
+  @apply text-lg font-semibold text-slate-900 dark:text-white;
 }
 
 .pill {
-  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-slate-100 text-slate-700;
+  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300;
 }

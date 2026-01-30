@@ -1,16 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronRightIcon, PencilSquareIcon, StarIcon, BanknotesIcon, ArrowTrendingUpIcon, CalendarDaysIcon, ClockIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { getWalletStats, type WalletStats } from '../api/stats';
+import { useAuth } from '../context/AuthContext';
 
 export default function GuideWallet() {
+  const { user } = useAuth();
   const [bankAccount, setBankAccount] = useState<{name: string, iban: string, bank: string} | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [stats, setStats] = useState<WalletStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const transactions = [
-      { id: 'TRX-1023', date: 'Jun 14, 2026', traveler: 'Sarah Johnson', tour: 'Gothic Quarter Night Walk', amount: 84.00, status: 'pending' },
-      { id: 'TRX-1022', date: 'Jun 10, 2026', traveler: 'Mike Ross', tour: 'Amsterdam Food Tour', amount: 112.50, status: 'completed' },
-      { id: 'TRX-1021', date: 'Jun 05, 2026', traveler: 'Emma Watson', tour: 'Hidden Gems of Tokyo', amount: 56.00, status: 'completed' },
-      { id: 'TRX-1020', date: 'Jun 01, 2026', traveler: 'Payout Withdrawal', tour: '-', amount: -450.00, status: 'completed' },
-  ];
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user?.id) {
+        setLoading(true);
+        const data = await getWalletStats(user.id);
+        if (data) {
+          setStats(data);
+        }
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, [user?.id]);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading wallet info...</div>;
+  }
+
+  const transactions = stats ? stats.transactions : [];
 
   return (
     <div className="font-sans text-slate-900 dark:text-slate-100 space-y-8">
@@ -28,8 +46,9 @@ export default function GuideWallet() {
           </div>
           <div className="relative group">
             <button 
-                disabled={!bankAccount}
+                disabled={!bankAccount || (stats?.totalBalance || 0) <= 0}
                 className="bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-orange-500/20"
+                onClick={() => alert('Payout request feature coming soon!')}
             >
                 <BanknotesIcon className="w-5 h-5" />
                 Request Payout
@@ -48,28 +67,27 @@ export default function GuideWallet() {
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 size-24 bg-primary-600/5 rounded-full group-hover:scale-110 transition-transform"></div>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1">Total Balance</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">$1,240.50</h3>
-            <div className="flex items-center gap-1 text-emerald-600 font-bold text-sm">
-              <ArrowTrendingUpIcon className="w-4 h-4" />
-              +12.4% vs last month
+            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">${stats?.totalBalance.toFixed(2) || '0.00'}</h3>
+            <div className="flex items-center gap-1 text-slate-400 text-sm font-medium">
+              Available to withdraw
             </div>
           </div>
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 size-24 bg-primary-600/5 rounded-full group-hover:scale-110 transition-transform"></div>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1">Upcoming Payout</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">$450.00</h3>
+            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">${stats?.upcomingPayout.toFixed(2) || '0.00'}</h3>
             <div className="flex items-center gap-1 text-slate-400 font-bold text-sm uppercase">
               <CalendarDaysIcon className="w-4 h-4" />
-              Next: June 15th
+              {stats?.upcomingPayout && stats.upcomingPayout > 0 ? "Processing" : "No active payouts"}
             </div>
           </div>
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 size-24 bg-primary-600/5 rounded-full group-hover:scale-110 transition-transform"></div>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1">Pending Earnings</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">$180.25</h3>
+            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">${stats?.pendingEarnings.toFixed(2) || '0.00'}</h3>
             <div className="flex items-center gap-1 text-amber-500 font-bold text-sm">
               <ClockIcon className="w-4 h-4" />
-              4 tours in clearance
+              {stats?.pendingToursCount || 0} tours in clearance
             </div>
           </div>
       </div>
@@ -83,6 +101,9 @@ export default function GuideWallet() {
                  <button className="text-primary-600 font-bold text-sm hover:underline">Download CSV</button>
               </div>
               <div className="overflow-x-auto flex-1">
+                 {transactions.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500">No transactions yet</div>
+                 ) : (
                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
                      <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold uppercase text-xs tracking-wider">
                          <tr>
@@ -114,6 +135,7 @@ export default function GuideWallet() {
                          ))}
                      </tbody>
                  </table>
+                 )}
               </div>
            </div>
         </div>
@@ -188,9 +210,18 @@ export default function GuideWallet() {
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-2xl flex flex-col items-center text-center text-white shadow-lg shadow-indigo-200">
             <StarIcon className="text-yellow-400 w-12 h-12 mb-3 drop-shadow-md" />
             <h4 className="font-bold text-lg text-white mb-1">Top Earners Bonus</h4>
-            <p className="text-sm text-indigo-100 mb-6">Complete 5 more tours this month to unlock a 5% bonus!</p>
+            <p className="text-sm text-indigo-100 mb-6">
+                {stats?.bonusProgress ? (
+                  stats.bonusProgress.current >= stats.bonusProgress.target 
+                   ? "You've unlocked the 5% bonus!" 
+                   : `Complete ${stats.bonusProgress.target - stats.bonusProgress.current} more tours this month to unlock a 5% bonus!`
+                ) : "Loading bonus status..."}
+            </p>
             <div className="w-full h-2.5 bg-black/20 rounded-full overflow-hidden">
-              <div className="bg-yellow-400 h-full w-2/3 shadow-[0_0_10px_rgba(250,204,21,0.5)]"></div>
+              <div 
+                className="bg-yellow-400 h-full shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-all duration-1000 ease-out"
+                style={{ width: `${stats?.bonusProgress?.percentage || 0}%` }}
+              ></div>
             </div>
           </div>
         </div>

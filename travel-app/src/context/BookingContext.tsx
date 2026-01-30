@@ -8,6 +8,9 @@ type BookingState = {
   duration: 'Half Day' | 'Full Day' | null
   price: number
   notes: string
+  participantCount?: number
+  isTourBooking?: boolean
+  tourId?: string
 }
 
 type BookingContextType = BookingState & {
@@ -25,6 +28,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     duration: null,
     price: 0,
     notes: '',
+    isTourBooking: false,
   })
 
   const setBookingDetails = (details: Partial<BookingState>) => {
@@ -39,6 +43,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       duration: null,
       price: 0,
       notes: '',
+      isTourBooking: false,
     })
   }
 

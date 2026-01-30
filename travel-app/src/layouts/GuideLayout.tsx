@@ -15,23 +15,24 @@ import {
 
 const guideNavItems = [
   { to: '/guide', label: 'Dashboard' },
-  { to: '/guide/inbox', label: 'Messages' },
+  { to: '/guide/bookings', label: 'Bookings' },
+  { to: '/guide/my-tours', label: 'My Tours' },
+  { to: '/guide/messages', label: 'Messages' },
   { to: '/guide/earnings', label: 'Earnings' },
   { to: '/guide/calendar', label: 'Calendar' },
   { to: '/guide/reviews', label: 'Reviews' },
-  { to: '/guide/wallet', label: 'Wallet' },
 ]
 
 export default function GuideLayout() {
   const { user, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  
-  if (user?.role !== 'Student Guide') {
-      return <Navigate to="/" replace />
-  }
-
   const menuRef = useRef<HTMLDivElement>(null)
+  
+  // Redirect travelers to home page - only student guides can access
+  if (user && user.role !== 'STUDENT_GUIDE') {
+    return <Navigate to="/" replace />
+  }
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -51,35 +52,39 @@ export default function GuideLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-primary-100/50">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-             {/* Mobile Menu Button */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky-header-shadow">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          
+          {/* 1. Brand Section */}
+          <div className="flex items-center gap-4">
              <button 
-                className="md:hidden p-2 -ml-2 text-slate-600"
+                className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
                 <span className="material-symbols-outlined">menu</span>
             </button>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20">
-              G
-            </div>
-            <div>
-              <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Guide Portal</p>
-              <p className="font-semibold text-slate-900 leading-tight">Travel with Student</p>
-            </div>
+            <Link to="/guide" className="flex items-center gap-3 group">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white font-bold text-xl shadow-lg shadow-orange-600/20 transition-transform group-hover:scale-105">
+                  G
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-extrabold text-orange-600 uppercase tracking-widest">Guide Portal</span>
+                  <span className="font-bold text-slate-900 leading-none text-lg tracking-tight">Travel with Student</span>
+                </div>
+            </Link>
           </div>
           
-          <nav className="hidden md:flex items-center gap-1">
+          {/* 2. Focused Navigation */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-full border border-slate-200/50">
             {guideNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  `px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 ${
                     isActive
-                      ? 'bg-orange-50 text-orange-700'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-white text-orange-600 shadow-sm ring-1 ring-slate-200/60'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
                   }`
                 }
                 end={item.to === '/guide'}
@@ -89,18 +94,29 @@ export default function GuideLayout() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Button as={Link} to="/guide/list-experience" variant="primary" size="sm" className="bg-orange-600 hover:bg-orange-700 hidden sm:flex">
-                + Create Tour
+          {/* 3. Global Actions */}
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* Switch Mode - Hidden as users shouldn't see this in guide panel */}
+            {/* Guide panel is only accessible to Student Guides, switcher is in main navbar */}
+
+            <Button 
+                as={Link} 
+                to="/guide/list-experience" 
+                variant="primary" 
+                size="sm" 
+                className="!bg-slate-900 !text-white hover:!bg-slate-800 shadow-xl shadow-slate-900/10 border-0 flex items-center gap-2 !px-5 !py-2.5 !rounded-full"
+            >
+                <span className="text-xl leading-none font-light">+</span> Create Tour
             </Button>
             
-            <div className="relative" ref={menuRef}>
+            <div className="relative pl-2" ref={menuRef}>
               <button 
                 onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                className="flex items-center gap-2 focus:outline-none"
+                className="flex items-center gap-2 focus:outline-none group"
+
                 aria-label="User menu"
               >
-                 <Avatar name={user?.name || "Guide User"} size="sm" verified />
+                 <Avatar name={user?.name || "Guide User"} size="sm" verified gender={user?.gender} />
               </button>
 
               {isMenuOpen && (
@@ -117,10 +133,19 @@ export default function GuideLayout() {
                        <div className="flex items-center justify-between mt-2">
                           <span className="text-xs font-medium text-slate-600">Status</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-emerald-600 font-bold">Online</span>
-                            <div className="w-8 h-4 bg-emerald-100 rounded-full relative cursor-pointer">
-                                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-emerald-500 rounded-full shadow-sm"></div>
-                            </div>
+                            {user?.showOnlineStatus !== false && (
+                              <>
+                                <span className={`text-xs font-bold ${user?.isOnline ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                  {user?.isOnline ? 'Online' : 'Offline'}
+                                </span>
+                                <div className={`w-8 h-4 rounded-full relative ${user?.isOnline ? 'bg-emerald-100' : 'bg-slate-200'}`}>
+                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full shadow-sm transition-all ${user?.isOnline ? 'right-0.5 bg-emerald-500' : 'left-0.5 bg-slate-400'}`}></div>
+                                </div>
+                              </>
+                            )}
+                            {user?.showOnlineStatus === false && (
+                              <span className="text-xs text-slate-400 italic">Hidden</span>
+                            )}
                           </div>
                        </div>
                   </div>
@@ -128,16 +153,13 @@ export default function GuideLayout() {
                   <div className="py-2">
                      <div className="px-3 py-1">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-3">Student Menu</p>
+                        <Link to={`/traveler/${user?.id}`} className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                            <EyeIcon className="w-5 h-5 text-slate-400" /> My Profile
+                        </Link>
                         <Link to={`/profile/${user?.id}`} target="_blank" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                            <EyeIcon className="w-5 h-5 text-slate-400" /> View Public Profile
+                            <PencilSquareIcon className="w-5 h-5 text-slate-400" /> View Public Profile
                         </Link>
-                        <Link to="/guide/edit-profile" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                            <PencilSquareIcon className="w-5 h-5 text-slate-400" /> Edit Profile
-                        </Link>
-                        <Link to="/guide/wallet" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                            <WalletIcon className="w-5 h-5 text-slate-400" /> Wallet & Earnings
-                        </Link>
-                        <Link to="/verification" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                        <Link to="/guide/verification" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
                             <ShieldCheckIcon className="w-5 h-5 text-slate-400" /> Trust & Verification
                         </Link>
                      </div>
@@ -146,14 +168,14 @@ export default function GuideLayout() {
 
                     <div className="px-3 py-1">
                         <Link 
-                            to="/settings" 
+                            to="/guide/settings" 
                             className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                             onClick={() => setIsMenuOpen(false)}
                         >
                             <Cog6ToothIcon className="w-5 h-5 text-slate-400" /> Settings
                         </Link>
                          <Link 
-                            to="/help" 
+                            to="/guide/help" 
                             className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                             onClick={() => setIsMenuOpen(false)}
                         >

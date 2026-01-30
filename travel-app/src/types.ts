@@ -1,17 +1,21 @@
 export type Guide = {
   id: string
+  userId: string // Link to User ID
   name: string
   city: string
   university: string
   rating: number
   reviews: number
+  totalBookings?: number
   price: number
   bio: string
   tags?: string[]
   image?: string
+  gender?: 'MALE' | 'FEMALE' | 'NOT_SPECIFIED'
   lat?: number
   lng?: number
   isPhoneVerified?: boolean
+  isStudentVerified?: boolean
 }
 
 export type City = {
@@ -40,6 +44,8 @@ export type Booking = {
   price: number
   status: BookingStatus
   hasReview?: boolean
+  travelerAttendance?: boolean
+  guideAttendance?: boolean
 }
 
 export type Message = {

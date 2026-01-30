@@ -81,7 +81,7 @@ export const cities: City[] = [
     id: 'c3',
     name: 'London',
     country: 'United Kingdom',
-    image: 'https://images.unsplash.com/photo-1439416915279-68957d86ad1e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'c4',
@@ -119,6 +119,37 @@ export const bookings: Booking[] = [
     price: 256, // 8 hours * 32
     status: 'completed',
     hasReview: false,
+  },
+  {
+    id: 'b3',
+    guideId: 'g2',
+    guide: guides[1],
+    date: '2026-02-20',
+    time: '09:00 AM',
+    duration: 'Full Day',
+    price: 256,
+    status: 'upcoming',
+  },
+  {
+    id: 'b4',
+    guideId: 'g3',
+    guide: guides[2],
+    date: '2026-02-18',
+    time: '11:00 AM',
+    duration: 'Half Day',
+    price: 140,
+    status: 'upcoming',
+  },
+  {
+    id: 'b5',
+    guideId: 'g1',
+    guide: guides[0],
+    date: '2026-01-21',
+    time: '05:00 PM',
+    duration: 'Half Day',
+    price: 112,
+    status: 'completed',
+    hasReview: true,
   },
 ]
 
@@ -217,4 +248,18 @@ export const guideReviews = [
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAZlK4AiD9K8KWy1eqP_Kk5syDvnwqMRY3BOYsWNNPY5sZzvGQw774Cc2CQR8mM_42r3O6u7-tXQEo_lsNQdQgLlaugiXZKyx6jWyORlbUd5PO55-cSvauAKKN-rhACoPs2lR6ta1o5FnXbPXauRfEYVLuaTYKyk3V3xqquZpdv7rUFXcqkytPNk-NysbCUgTuu_1NFUiRpRQ9J6TxRVKnrzYRLdAzFywU5z6F-B-M8LZ37en0hHqJYAN0W-ugyMmkKatZVyHYEEiN_'
   }
 ];
+
+// Admin Users Data
+export const adminUsers = [
+  { id: 'u1', name: 'Alex Johnson', email: 'alex@example.com', role: 'Traveler' as const, status: 'active' as const, verified: true, joinDate: '2024-03-15', totalBookings: 12, totalSpent: 1450 },
+  { id: guides[0].id, name: guides[0].name, email: 'aisha@bogazici.edu.tr', role: 'Student Guide' as const, status: 'active' as const, verified: guides[0].isPhoneVerified || false, joinDate: '2024-01-10', totalBookings: guides[0].reviews, totalEarned: 3680 },
+  { id: 'u3', name: 'Mike Ross', email: 'mike@example.com', role: 'Traveler' as const, status: 'active' as const, verified: false, joinDate: '2024-06-20', totalBookings: 3, totalSpent: 340 },
+  { id: guides[1].id, name: guides[1].name, email: 'mateo@ub.edu', role: 'Student Guide' as const, status: 'active' as const, verified: true, joinDate: '2024-07-01', totalBookings: guides[1].reviews, totalEarned: 2800 },
+  { id: 'u5', name: 'Emma Watson', email: 'emma@example.com', role: 'Traveler' as const, status: 'active' as const, verified: true, joinDate: '2023-11-05', totalBookings: 8, totalSpent: 890 },
+  { id: guides[2].id, name: guides[2].name, email: 'zara@kcl.ac.uk', role: 'Student Guide' as const, status: 'active' as const, verified: true, joinDate: '2024-05-12', totalBookings: guides[2].reviews, totalEarned: 2100 },
+  { id: guides[3].id, name: guides[3].name, email: 'luca@uniroma1.it', role: 'Student Guide' as const, status: 'active' as const, verified: false, joinDate: '2024-08-20', totalBookings: guides[3].reviews, totalEarned: 1500 },
+  { id: 'u8', name: 'Sarah Johnson', email: 'sarah@example.com', role: 'Traveler' as const, status: 'active' as const, verified: true, joinDate: '2024-02-20', totalBookings: 5, totalSpent: 680 },
+  { id: 'u9', name: 'David Chen', email: 'david@example.com', role: 'Traveler' as const, status: 'active' as const, verified: true, joinDate: '2024-04-12', totalBookings: 7, totalSpent: 920 },
+  { id: 'u10', name: 'Lisa Anderson', email: 'lisa@example.com', role: 'Traveler' as const, status: 'active' as const, verified: false, joinDate: '2024-05-30', totalBookings: 2, totalSpent: 280 },
+]
 

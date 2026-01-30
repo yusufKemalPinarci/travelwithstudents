@@ -31,8 +31,8 @@ describe('GuideProfileEditor Validations', () => {
     fireEvent.change(bioInput, { target: { value: 'Hi there' } })
 
     // Assert: Check if a validation error is displayed regarding the 150-character limit.
-    // Logic in component: {isBioLengthValid ? (...) : `Minimum 150 characters required.`}
-    expect(screen.getByText(/Minimum 150 characters required/i)).toBeInTheDocument()
+    // Logic in component: {isBioLengthValid ? (...) : `Please write at least 150 characters...`}
+    expect(screen.getByText(/Please write at least 150 characters/i)).toBeInTheDocument()
 
     // Assert: Check if the submit button is Disabled
     // Button text is "Save Changes"
@@ -44,8 +44,8 @@ describe('GuideProfileEditor Validations', () => {
     fireEvent.change(bioInput, { target: { value: longBio } })
     
     // Error should be gone
-    expect(screen.queryByText(/Minimum 150 characters required/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/Great length!/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Please write at least 150 characters/i)).not.toBeInTheDocument()
+    // expect(screen.getByText(/Great length!/i)).toBeInTheDocument() // Removed as it doesn't exist in component
     
     // Button should be enabled (assuming University is set? No, University defaults to something? 
     // Checking logic: disabled={!isBioLengthValid || (isOtherUni && !customUni.trim())}

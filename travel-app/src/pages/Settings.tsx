@@ -1,11 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
-import { ShieldCheckIcon, CameraIcon } from '@heroicons/react/24/solid';
+import { 
+  ShieldCheckIcon, 
+  CameraIcon, 
+  EnvelopeIcon, 
+  Cog6ToothIcon, 
+  BellIcon, 
+  LockClosedIcon, 
+  ExclamationTriangleIcon,
+  EyeIcon,
+  EyeSlashIcon
+} from '@heroicons/react/24/solid';
 import { useAuth } from '../context/AuthContext';
+import { updateUserProfile } from '../api/auth';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [notifications, setNotifications] = useState({
     push: true,
     email: true,
@@ -13,46 +24,116 @@ export default function Settings() {
     marketing: false
   });
   const [language, setLanguage] = useState('English');
+  const [currency, setCurrency] = useState('usd');
+  const [showOnlineStatus, setShowOnlineStatus] = useState(user?.showOnlineStatus ?? true);
+  const [isOnline, setIsOnline] = useState(user?.isOnline ?? true);
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NOT_SPECIFIED'>(user?.gender || 'NOT_SPECIFIED');
+
+  useEffect(() => {
+    setShowOnlineStatus(user?.showOnlineStatus ?? true);
+    setIsOnline(user?.isOnline ?? true);
+    setGender(user?.gender || 'NOT_SPECIFIED');
+  }, [user]);
 
   const handleToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleOnlineStatusSave = async () => {
+    if (!user) return;
+    
+    try {
+      const updated = await updateUserProfile(user.id, {
+        isOnline,
+        showOnlineStatus,
+        gender
+      });
+      
+      if (updated && setUser) {
+        setUser({ ...user, isOnline: updated.isOnline, showOnlineStatus: updated.showOnlineStatus, gender: updated.gender });
+      }
+      
+      // Toast notification
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-10 right-10 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3";
+      toast.innerHTML = `
+          <svg class="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <div>
+              <p class="font-bold text-sm">Status Updated</p>
+              <p class="text-xs text-slate-300">Your online status preferences have been saved.</p>
+          </div>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  const handleGeneralSettingsSave = () => {
+    // Save language, currency, and gender preferences
+    localStorage.setItem('appLanguage', language);
+    localStorage.setItem('currency', currency);
+    
+    // Show success toast
+    const toast = document.createElement('div');
+    toast.className = "fixed bottom-10 right-10 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3";
+    toast.innerHTML = `
+        <svg class="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <div>
+            <p class="font-bold text-sm">Settings Saved</p>
+            <p class="text-xs text-slate-300">Your preferences have been updated successfully.</p>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 text-slate-900 dark:text-slate-100">
+    <div className="max-w-5xl mx-auto px-4 py-8 text-slate-900 dark:text-slate-100">
       <div className="mb-8">
-        <h1 className="text-3xl font-black leading-tight tracking-tight text-blue-900">App Settings</h1>
-        <p className="text-slate-600 text-base mt-2">Manage your application preferences and security.</p>
+        <h1 className="text-2xl md:text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">App Settings</h1>
+        <p className="text-slate-600 dark:text-slate-400 text-base mt-2">Manage your application preferences and security.</p>
       </div>
 
       <div className="space-y-10">
         
         {/* Profile Card */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm p-6 flex items-center gap-6">
+        <section className="card-surface p-4 md:p-6 flex flex-col md:flex-row items-center gap-6">
              <div className="relative group cursor-pointer">
-                 <div className="w-20 h-20 rounded-full border-4 border-slate-100 dark:border-slate-700 overflow-hidden">
-                     <Avatar name={user?.name || "User"} size="xl" verified={user?.isEmailVerified} />
+                 <div className="w-20 h-20 rounded-full border-4 border-slate-200 dark:border-slate-700 overflow-hidden">
+                     <Avatar name={user?.name || "User"} size="xl" verified={user?.isEmailVerified} gender={user?.gender} />
                  </div>
                  <div className="absolute inset-0 bg-slate-900/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <CameraIcon className="w-6 h-6 text-white" />
                  </div>
                  <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" />
              </div>
-             <div>
+             <div className="text-center md:text-left">
                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name || "Guest User"}</h2>
                  <p className="text-slate-500 dark:text-slate-400">{user?.email || "guest@example.com"}</p>
-                 <Button variant="ghost" size="sm" className="mt-2 text-primary-600 dark:text-primary-400 -ml-3 hover:bg-slate-100 dark:hover:bg-slate-800">Change Profile Photo</Button>
+                 <Button variant="ghost" size="sm" className="mt-2 text-primary-600 dark:text-primary-400 hover:bg-slate-50 dark:hover:bg-slate-800">Change Profile Photo</Button>
              </div>
         </section>
 
         {/* Contact Information */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <section className="card-surface overflow-hidden">
+             <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                  <h2 className="font-bold text-lg flex items-center gap-2 text-slate-900 dark:text-white">
-                     <span className="material-symbols-outlined text-slate-500">contact_mail</span> Contact Information
+                     <EnvelopeIcon className="w-5 h-5 text-slate-500" /> Contact Information
                  </h2>
              </div>
-             <div className="p-6 grid gap-6 max-w-2xl">
+             <div className="p-4 md:p-6 grid gap-6 max-w-2xl">
                 {/* Email Field */}
                 <div>
                     <label className="block text-sm font-bold text-slate-900 dark:text-slate-200 mb-2">Email Address</label>
@@ -120,13 +201,13 @@ export default function Settings() {
         </section>
         
         {/* General Settings */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <section className="card-surface overflow-hidden">
+             <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                  <h2 className="font-bold text-lg flex items-center gap-2 text-slate-900 dark:text-white">
-                     <span className="material-symbols-outlined text-slate-500">settings</span> General
+                     <Cog6ToothIcon className="w-5 h-5 text-slate-500" /> General
                  </h2>
              </div>
-             <div className="p-6 space-y-6">
+             <div className="p-4 md:p-6 space-y-6">
                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                      <div>
                          <p className="font-bold text-slate-900 dark:text-white">App Language</p>
@@ -147,29 +228,84 @@ export default function Settings() {
                  
                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
                      <div>
+                         <p className="font-bold text-slate-900 dark:text-white">Gender</p>
+                         <p className="text-sm text-slate-500 dark:text-slate-400">Used for default profile avatar if no photo is uploaded.</p>
+                     </div>
+                     <select 
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE' | 'NOT_SPECIFIED')}
+                        className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                     >
+                         <option value="NOT_SPECIFIED">Prefer not to say</option>
+                         <option value="MALE">Male</option>
+                         <option value="FEMALE">Female</option>
+                     </select>
+                 </div>
+
+                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                     <div>
                          <p className="font-bold text-slate-900 dark:text-white">Currency</p>
                          <p className="text-sm text-slate-500 dark:text-slate-400">Choose how prices are displayed (USD, EUR, etc.).</p>
                      </div>
-                     <select className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                     <select 
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                     >
                          <option value="usd">USD ($)</option>
                          <option value="eur">EUR (€)</option>
                          <option value="gbp">GBP (£)</option>
                          <option value="jpy">JPY (¥)</option>
                      </select>
                  </div>
+                 
+                 <div className="pt-4">
+                    <Button onClick={handleGeneralSettingsSave}>
+                        Save General Settings
+                    </Button>
+                 </div>
              </div>
         </section>
 
         {/* Notification Settings */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <section className="card-surface overflow-hidden">
+             <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                  <h2 className="font-bold text-lg flex items-center gap-2 text-slate-900 dark:text-white">
-                     <span className="material-symbols-outlined text-slate-500">notifications</span> Notifications
+                     <BellIcon className="w-5 h-5 text-slate-500" /> Notifications
                  </h2>
              </div>
-             <div className="p-6 space-y-6">
+             <div className="p-4 md:p-6 space-y-6">
+                 {/* Online Status Visibility */}
+                 <div className="flex items-center justify-between pb-6 border-b border-slate-100 dark:border-slate-800">
+                     <div className="flex-1">
+                         <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                           {showOnlineStatus ? <EyeIcon className="w-4 h-4 text-emerald-500" /> : <EyeSlashIcon className="w-4 h-4 text-slate-400" />}
+                           Show Online Status
+                         </p>
+                         <p className="text-sm text-slate-500 dark:text-slate-400">Let others see when you're online and available.</p>
+                     </div>
+                     <ToggleSwitch checked={showOnlineStatus} onChange={() => setShowOnlineStatus(!showOnlineStatus)} />
+                 </div>
+
+                 {/* Current Status */}
+                 {showOnlineStatus && (
+                   <div className="flex items-center justify-between pb-6 border-b border-slate-100 dark:border-slate-800">
+                       <div>
+                           <p className="font-bold text-slate-900 dark:text-white">Set as Online</p>
+                           <p className="text-sm text-slate-500 dark:text-slate-400">Mark yourself as available to receive bookings.</p>
+                       </div>
+                       <ToggleSwitch checked={isOnline} onChange={() => setIsOnline(!isOnline)} />
+                   </div>
+                 )}
+
+                 <div className="pt-2">
+                    <Button onClick={handleOnlineStatusSave}>
+                        Save Status Preferences
+                    </Button>
+                 </div>
+
                  {/* Push Notifications */}
-                 <div className="flex items-center justify-between">
+                 <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
                      <div>
                          <p className="font-bold text-slate-900 dark:text-white">Push Notifications</p>
                          <p className="text-sm text-slate-500 dark:text-slate-400">Receive alerts on your device for new bookings.</p>
@@ -207,13 +343,13 @@ export default function Settings() {
         </section>
 
         {/* Security / Danger Zone */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <section className="card-surface overflow-hidden">
+             <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                  <h2 className="font-bold text-lg flex items-center gap-2 text-slate-900 dark:text-white">
-                     <span className="material-symbols-outlined text-slate-500">security</span> Security
+                     <LockClosedIcon className="w-5 h-5 text-slate-500" /> Security
                  </h2>
              </div>
-             <div className="p-6 space-y-6">
+             <div className="p-4 md:p-6 space-y-6">
                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                      <div>
                          <p className="font-bold text-slate-900 dark:text-white">Change Password</p>
@@ -233,7 +369,7 @@ export default function Settings() {
                  <div className="pt-8 mt-4 border-t border-slate-100 dark:border-slate-700">
                      <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900 rounded-xl p-5">
                          <h3 className="font-bold text-rose-700 dark:text-rose-400 mb-2 flex items-center gap-2">
-                             <span className="material-symbols-outlined">warning</span> Danger Zone
+                             <ExclamationTriangleIcon className="w-5 h-5" /> Danger Zone
                          </h3>
                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                              <p className="text-sm text-rose-800/80 dark:text-rose-300">

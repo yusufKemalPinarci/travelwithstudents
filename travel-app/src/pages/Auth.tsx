@@ -12,6 +12,7 @@ const roles = ['Traveler', 'Student Guide'] as const
 type Role = (typeof roles)[number]
 
 type FormState = {
+  name: string
   email: string
   password: string
   confirm?: string
@@ -20,10 +21,12 @@ type FormState = {
 export default function AuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const { login, register } = useAuth()
+  // Ensure mode is strictly 'login' or 'register'
+  const initialMode = (location.state as any)?.mode === 'register' ? 'register' : 'login';
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const [role, setRole] = useState<Role>('Traveler')
-  const [form, setForm] = useState<FormState>({ email: '', password: '', confirm: '' })
+  const [form, setForm] = useState<FormState>({ name: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -38,6 +41,11 @@ export default function AuthPage() {
 
     if (!form.email || !form.password) {
       setError('Email and password are required.')
+      return
+    }
+
+    if (mode === 'register' && !form.name) {
+      setError('Name is required.')
       return
     }
     
@@ -56,37 +64,58 @@ export default function AuthPage() {
     }
 
     setLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 700))
-    setLoading(false)
-
-    login(role)
-
-    // Routing Logic based on Role
-    let from = location.state?.from?.pathname || location.state?.from || (role === 'Student Guide' ? '/guide' : '/')
     
-    // Prevent Travelers from being redirected to Guide pages
-    if (role === 'Traveler' && from.toString().startsWith('/guide')) {
-        from = '/';
-    }
+    try {
+      let result;
+      const apiRole = role === 'Traveler' ? 'TRAVELER' : 'STUDENT_GUIDE';
 
-    navigate(from, { replace: true })
+      if (mode === 'login') {
+        result = await login({ email: form.email, password: form.password });
+      } else {
+        result = await register({ 
+          email: form.email, 
+          password: form.password,
+          name: form.name,
+          role: apiRole
+        });
+      }
+
+      if (result.success && result.user) {
+        // Routing Logic based on Role
+        const userRole = result.user.role;
+        
+        // Default navigation based on role
+        if (userRole === 'STUDENT_GUIDE') {
+          // Student guides go to their dashboard
+          navigate('/guide/dashboard');
+        } else {
+          // Travelers go to home page
+          navigate('/');
+        }
+      } else {
+        setError(result.message || 'Authentication failed');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="mx-auto max-w-md space-y-8 py-12 px-4 sm:px-0">
       <div className="text-center">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
           {headline}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {mode === 'login'
             ? 'Sign in to your account'
             : 'Start your journey with us today'}
         </p>
       </div>
 
-      <div className="bg-white px-4 py-6 shadow-soft sm:rounded-xl sm:px-10 border border-slate-100">
+      <div className="bg-white dark:bg-slate-900 px-4 py-6 shadow-soft sm:rounded-xl sm:px-10 border border-slate-100 dark:border-slate-800">
         <div className="mb-6 flex justify-center">
           <ToggleButton
             options={roles}
@@ -96,6 +125,16 @@ export default function AuthPage() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {mode === 'register' && (
+            <InputField
+              id="name"
+              type="text"
+              label="Full Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+          )}
+
           <InputField
             id="email"
             type="email"
@@ -158,12 +197,27 @@ export default function AuthPage() {
             onClick={() => {
               setMode(mode === 'login' ? 'register' : 'login')
               setError('')
-              setForm({ email: '', password: '', confirm: '' })
+              setForm({ name: '', email: '', password: '', confirm: '' })
             }}
             className="font-medium text-primary-600 hover:text-primary-500 hover:underline"
           >
             {mode === 'login' ? 'Sign up' : 'Log in'}
           </button>
+        </div>
+
+        {/* Skip Login - Browse as Guest */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="group inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <span>Continue without signing in</span>
+            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </button>
+          <p className="text-xs text-slate-400 mt-1">Browse tours as a guest</p>
         </div>
       </div>
     </div>
