@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { verifyMeetingQR } from '../api/bookings';
+import { verifyMeetingQR, signalGuideArrival } from '../api/bookings';
 import Button from './Button';
 
 interface QRVerificationModalProps {
@@ -66,6 +66,10 @@ const QRVerificationModal: React.FC<QRVerificationModalProps> = ({
             role: 'GUIDE'
           });
           setQrData(payload);
+          
+          // SIGNAL ARRIVAL TO BACKEND
+          signalGuideArrival(bookingId, { lat: coords.lat, lng: coords.lng });
+
           setStep('READY_TO_SCAN'); // Show QR
         } else {
           // Traveler - Start Scanner

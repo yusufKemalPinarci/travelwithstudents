@@ -180,3 +180,11 @@ export const resolveNoShow = async (bookingId: string, action: 'ADMIT' | 'DISPUT
     const response = await apiClient.post(`/bookings/${bookingId}/resolve-no-show`, { action });
     return response.data;
 };
+
+export const signalGuideArrival = async (bookingId: string, location: { lat: number; lng: number }) => {
+    try {
+        await apiClient.post(`/bookings/${bookingId}/signal-arrival`, location);
+    } catch (e) {
+        console.error("Failed to signal arrival", e);
+    }
+};
