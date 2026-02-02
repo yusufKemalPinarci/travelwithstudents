@@ -273,31 +273,13 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
                         onClick={() => { setQrBookingId(booking.id); setQrModalOpen(true); }}
                         className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
                     >
-                        Show QR
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onStatusUpdate(booking.id, 'REPORT_NO_SHOW')}
-                      className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                    >
-                      <ExclamationCircleIcon className="w-4 h-4 mr-2" />
-                      Traveler No-Show
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => onStatusUpdate(booking.id, 'CONFIRMED_ATTENDANCE')}
-                      className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                    >
-                      <CheckCircleIcon className="w-4 h-4 mr-2" />
-                      Mark Completed
+                        Show QR Code (Verify Meeting)
                     </Button>
                   </>
                 ) : (
                   <span className="text-sm font-bold text-slate-500 py-1.5 px-3 bg-slate-100 rounded-full flex items-center">
                     {booking.guideAttendance === 'CONFIRMED' ? (
-                       <><CheckCircleIcon className="w-4 h-4 mr-1.5 text-emerald-500" /> You Confirmed</>
+                       <><CheckCircleIcon className="w-4 h-4 mr-1.5 text-emerald-500" /> Verified</>
                     ) : ( 
                        <><ExclamationCircleIcon className="w-4 h-4 mr-1.5 text-rose-500" /> You Reported No-Show</>
                     )}

@@ -174,35 +174,27 @@ const BookingCard = ({ booking, onReview, onCancel, onAttendanceConfirmed }: Boo
             </div>
 
             {/* Attendance confirmation status */}
-            {isPastDate() && booking.status !== 'cancelled' && (
+            {isPastDate() && booking.status !== 'cancelled' && booking.status !== 'completed' && (
               <div className="mt-4 space-y-2">
-                {needsAttendanceConfirmation() && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-sm text-amber-800 font-medium">
-                      ✓ Please confirm that this tour was completed
+                      ⚠ Meeting not verified yet. Please scan QR with your guide.
                     </p>
-                  </div>
-                )}
-                {waitingForOtherParty() && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-800 font-medium">
-                      ✓ You confirmed. Waiting for the other party to confirm.
-                    </p>
-                  </div>
-                )}
-                {booking.travelerAttendance && booking.guideAttendance && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <p className="text-sm text-emerald-800 font-medium">
-                      ✓ Both parties confirmed. Payment has been released!
-                    </p>
-                  </div>
-                )}
+                 </div>
               </div>
+            )}
+            
+            {booking.status === 'completed' && (
+                 <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-sm text-emerald-800 font-medium">
+                      ✓ Tour Verified & Completed!
+                    </p>
+                 </div>
             )}
          </div>
 
          <div className="flex gap-3 mt-6 justify-end border-t border-slate-100 pt-4">
-             {booking.status === 'upcoming' && (
+             {(booking.status === 'upcoming' || booking.status === 'confirmed') && (
                  <>
                     {onVerifyQR && (
                            <Button 
@@ -211,7 +203,7 @@ const BookingCard = ({ booking, onReview, onCancel, onAttendanceConfirmed }: Boo
                              className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
                              onClick={() => onVerifyQR(booking.id)}
                            >
-                             Verify QR
+                             Scan QR to Verify
                            </Button>
                     )}
                     <Button 
@@ -229,17 +221,7 @@ const BookingCard = ({ booking, onReview, onCancel, onAttendanceConfirmed }: Boo
                      Rebook
                  </Button>
              )}
-             {needsAttendanceConfirmation() && (
-               <Button 
-                 variant="primary" 
-                 size="sm"
-                 onClick={handleConfirmAttendance}
-                 disabled={isConfirming}
-               >
-                 {isConfirming ? 'Confirming...' : 'Confirm Tour Completed'}
-               </Button>
-             )}
-              {booking.status === 'completed' && !booking.hasReview && booking.travelerAttendance && booking.guideAttendance && (
+             {booking.status === 'completed' && !booking.hasReview && (
                   <Button 
                     variant="outline" 
                     size="sm" 
