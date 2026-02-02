@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getMyBookings, updateBookingStatus, confirmAttendance } from '../api/bookings'
+import { getMyBookings, updateBookingStatus, confirmAttendance, reportNoShow } from '../api/bookings'
 import { getOrCreateConversation } from '../api/messages'
 import type { Booking } from '../api/bookings'
 import Button from '../components/Button'
@@ -150,6 +150,9 @@ export default function GuideBookingsPage() {
                booking={booking} 
                onStatusUpdate={handleStatusUpdate}
                onContactTraveler={handleContactTraveler}
+               onReportNoShow={handleReportNoShow}
+               setQrBookingId={setQrBookingId}
+               setQrModalOpen={setQrModalOpen}
             />
           ))
         )}
@@ -158,20 +161,35 @@ export default function GuideBookingsPage() {
   )
 }
 
-function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: { 
+// @ts-ignore
+function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler, onReportNoShow, setQrBookingId, setQrModalOpen }: { 
     booking: Booking, 
     onStatusUpdate: (id: string, status: string) => void,
-    onContactTraveler: (travelerId: string) => void
+    onContactTraveler: (travelerId: string) => void,
+    onReportNoShow: (id: string) => void,
+    setQrBookingId: (id: string) => void,
+    setQrModalOpen: (val: boolean) => void
 }) {
   const isPending = booking.status === 'pending'
   const isConfirmed = booking.status === 'confirmed'
   const isCompleted = booking.status === 'completed'
   const isCancelled = booking.status === 'cancelled'
-  const isDisputed = booking.status === 'disputed' as any // Handle custom status if not in frontend types yet
+  const isDisputed = booking.status === 'disputed' || booking.status === 'no_show_traveler' as any // Handle custom status
 
-  // Check if attendance is already reported (either CONFIRMED or NO_SHOW, assumed 'PENDING' if not set)
-  // Backend returns strings 'PENDING', 'CONFIRMED', 'NO_SHOW'. Frontend type might be boolean | string.
-  // We treat anything truthy and not 'PENDING' as reported.
+  const bookingDate = new Date(booking.date || booking.bookingDate);
+  const bookingTime = booking.time || booking.bookingTime; 
+  // Combine date and time to check if we are allowed to report No-Show (15 mins after)
+  // Simple heuristic: if day is today or past, show button. 
+  // Better: Strict time check. Assume time is "HH:mm".
+  const now = new Date();
+  let startTime = new Date(bookingDate);
+  if (bookingTime) {
+      const [hours, mins] = bookingTime.split(':').map(Number);
+      startTime.setHours(hours, mins, 0, 0);
+  }
+  const showNoShowButton = now.getTime() > startTime.getTime() + 15 * 60000; // 15 mins after
+
+  // Check if attendance is already reported
   const hasReportedAttendance = booking.guideAttendance && booking.guideAttendance !== 'PENDING' && booking.guideAttendance !== false;
 
   return (
@@ -228,7 +246,7 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
                 ${isCancelled ? 'bg-slate-100 text-slate-500' : ''}
                 ${isDisputed ? 'bg-red-100 text-red-700' : ''}
              `}>
-               {booking.status}
+                {booking.status === 'no_show_traveler' ? 'Claiming No-Show' : booking.status}
              </div>
            </div>
 
@@ -273,13 +291,26 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
                         onClick={() => { setQrBookingId(booking.id); setQrModalOpen(true); }}
                         className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
                     >
-                        Show QR Code (Verify Meeting)
+                        Show QR (Verify)
                     </Button>
+                    
+                    {showNoShowButton && (
+                         <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onReportNoShow(booking.id)}
+                            className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                         >
+                            Report No-Show
+                         </Button>
+                    )}
                   </>
                 ) : (
                   <span className="text-sm font-bold text-slate-500 py-1.5 px-3 bg-slate-100 rounded-full flex items-center">
                     {booking.guideAttendance === 'CONFIRMED' ? (
-                       <><CheckCircleIcon className="w-4 h-4 mr-1.5 text-emerald-500" /> Verified</>
+                        booking.status === 'no_show_traveler' 
+                        ? <><ExclamationCircleIcon className="w-4 h-4 mr-1.5 text-amber-500" /> No-Show Claimed</>
+                        : <><CheckCircleIcon className="w-4 h-4 mr-1.5 text-emerald-500" /> Verified</>
                     ) : ( 
                        <><ExclamationCircleIcon className="w-4 h-4 mr-1.5 text-rose-500" /> You Reported No-Show</>
                     )}
@@ -290,19 +321,11 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
            
            {isDisputed && (
              <div className="mt-2 text-right">
-                <span className="text-red-600 text-sm font-bold">Booking Disputed - Contact Support</span>
+                <span className="text-red-600 text-sm font-bold">Booking Disputed or Claimed - Awaiting Traveler Confirmation</span>
              </div>
            )}
         </div>
       </div>
-      
-      <QRVerificationModal 
-        isOpen={qrModalOpen} 
-        onClose={() => setQrModalOpen(false)} 
-        bookingId={qrBookingId || ''} 
-        role="STUDENT_GUIDE" 
-        onSuccess={() => fetchMyBookings()} 
-      />
     </div>
   )
 }

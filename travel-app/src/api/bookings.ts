@@ -167,3 +167,16 @@ export const verifyMeetingQR = async (
     throw error;
   }
 };
+
+export const reportNoShow = async (bookingId: string, location: { lat: number; lng: number }) => {
+    const response = await apiClient.post(`/bookings/${bookingId}/report-no-show`, {
+        guideLat: location.lat,
+        guideLng: location.lng
+    });
+    return response.data;
+};
+
+export const resolveNoShow = async (bookingId: string, action: 'ADMIT' | 'DISPUTE') => {
+    const response = await apiClient.post(`/bookings/${bookingId}/resolve-no-show`, { action });
+    return response.data;
+};
