@@ -11,6 +11,7 @@ type BookingCardProps = {
   onReview?: (booking: Booking) => void
   onCancel?: (booking: Booking) => void
   onAttendanceConfirmed?: () => void
+  onVerifyQR?: (bookingId: string) => void
 }
 
 const statusColors = {
@@ -203,6 +204,16 @@ const BookingCard = ({ booking, onReview, onCancel, onAttendanceConfirmed }: Boo
          <div className="flex gap-3 mt-6 justify-end border-t border-slate-100 pt-4">
              {booking.status === 'upcoming' && (
                  <>
+                    {onVerifyQR && (
+                           <Button 
+                             variant="secondary" 
+                             size="sm"
+                             className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
+                             onClick={() => onVerifyQR(booking.id)}
+                           >
+                             Verify QR
+                           </Button>
+                    )}
                     <Button 
                         variant="ghost" 
                         size="sm" 

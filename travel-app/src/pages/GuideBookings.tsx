@@ -5,6 +5,7 @@ import { getMyBookings, updateBookingStatus, confirmAttendance } from '../api/bo
 import { getOrCreateConversation } from '../api/messages'
 import type { Booking } from '../api/bookings'
 import Button from '../components/Button'
+import QRVerificationModal from '../components/QRVerificationModal'
 import Avatar from '../components/Avatar'
 import { getImageUrl } from '../utils/image'
 import { 
@@ -33,6 +34,8 @@ export default function GuideBookingsPage() {
   
   const [activeTab, setActiveTab] = useState(initialStatus)
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [qrBookingId, setQrBookingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -264,6 +267,14 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
 
                 {!hasReportedAttendance ? (
                   <>
+                    <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => { setQrBookingId(booking.id); setQrModalOpen(true); }}
+                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
+                    >
+                        Show QR
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -302,6 +313,14 @@ function GuideBookingCard({ booking, onStatusUpdate, onContactTraveler }: {
            )}
         </div>
       </div>
+      
+      <QRVerificationModal 
+        isOpen={qrModalOpen} 
+        onClose={() => setQrModalOpen(false)} 
+        bookingId={qrBookingId || ''} 
+        role="STUDENT_GUIDE" 
+        onSuccess={() => fetchMyBookings()} 
+      />
     </div>
   )
 }

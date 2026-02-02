@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import BookingCard from '../components/BookingCard.tsx'
 import ReviewModal from '../components/ReviewModal.tsx'
 import CancellationModal from '../components/CancellationModal.tsx'
+import QRVerificationModal from '../components/QRVerificationModal.tsx'
 import type { BookingStatus } from '../types.ts'
 import { getMyBookings } from '../api/bookings'
 import type { Booking } from '../api/bookings'
@@ -23,6 +24,9 @@ export default function TripsPage() {
   const [loading, setLoading] = useState(true)
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null)
   const [cancelBooking, setCancelBooking] = useState<Booking | null>(null)
+
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [qrBookingId, setQrBookingId] = useState<string | null>(null)
 
   // API'den booking'leri çek
   const fetchBookings = async () => {
@@ -116,6 +120,7 @@ export default function TripsPage() {
                   onReview={(b) => setReviewBooking(b)}
                   onCancel={(b) => setCancelBooking(b)}
                   onAttendanceConfirmed={handleAttendanceConfirmed}
+                  onVerifyQR={(id) => { setQrBookingId(id); setQrModalOpen(true); }}
               />
             ))
           ) : (
@@ -149,6 +154,14 @@ export default function TripsPage() {
             onConfirm={handleCancelConfirm}
         />
       )}
+
+      <QRVerificationModal 
+          isOpen={qrModalOpen} 
+          onClose={() => setQrModalOpen(false)} 
+          bookingId={qrBookingId || ''} 
+          role={user?.role === 'STUDENT_GUIDE' ? 'STUDENT_GUIDE' : 'TRAVELER'}
+          onSuccess={() => fetchBookings()} 
+      />
     </div>
   )
 }

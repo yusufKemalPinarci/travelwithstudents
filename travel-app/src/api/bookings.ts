@@ -155,3 +155,15 @@ export const confirmAttendance = async (bookingId: string, status: 'CONFIRMED' |
     };
   }
 };
+
+export const verifyMeetingQR = async (
+  bookingId: string, 
+  data: { qrData: string; scannerLat: number; scannerLng: number; scannerRole: string }
+) => {
+  try {
+    const response = await apiClient.post(`/bookings/${bookingId}/verify-qr`, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
